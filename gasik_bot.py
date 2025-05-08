@@ -1,22 +1,26 @@
-from telegram.ext import ApplicationBuilder
-
-app = ApplicationBuilder().token(BOT_TOKEN).build()
-
-
+from dotenv import load_dotenv
 import os
 
-VIN, BRAND, MODEL, YEAR, COMMENT, EXTRA = range(6)
+# Загружаем переменные окружения из .env файла
+load_dotenv()
+BOT_TOKEN = os.getenv("BOT_TOKEN")  # ❗ Единственный раз!
+
+from telegram import Update, InputFile
+from telegram.ext import (
+    ApplicationBuilder, CommandHandler, MessageHandler,
+    filters, ConversationHandler, ContextTypes
+)
 
 YOUR_TELEGRAM_ID = 6118019853
-BOT_TOKEN = "7904294665:AAHC7eSR5M6MdZVFiICNui0BP8t7JkssELg"  
 
-# Приветствие при любом сообщении
+# Состояния
+VIN, BRAND, MODEL, YEAR, COMMENT, EXTRA = range(6)
+
 async def welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Добро пожаловать в автоМаркет!\nЧтобы оформить заказ, напиши /start"
     )
 
-# Старт диалога
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
     await update.message.reply_text("Введите VIN (17 символов):")
@@ -95,15 +99,12 @@ async def finish_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(chat_id=YOUR_TELEGRAM_ID, text=msg)
 
-    # Отправить фото, если есть
     if 'photo' in data:
         with open(data['photo'], 'rb') as f:
             await context.bot.send_photo(chat_id=YOUR_TELEGRAM_ID, photo=InputFile(f))
         os.remove(data['photo'])
 
-    await update.message.reply_text(
-        "✅ Заказ оформлен! Чтобы начать новый — нажми /start"
-    )
+    await update.message.reply_text("✅ Заказ оформлен! Чтобы начать новый — нажми /start")
     return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -111,6 +112,9 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 if __name__ == '__main__':
+    if not BOT_TOKEN:
+        raise ValueError("❌ BOT_TOKEN не установлен! Убедись, что переменная окружения задана.")
+
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     conv_handler = ConversationHandler(
@@ -132,5 +136,5 @@ if __name__ == '__main__':
 
     app.add_handler(conv_handler)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, welcome))
-    app.run_polling()
 
+    app.run_polling()

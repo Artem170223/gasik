@@ -3,5 +3,8 @@ services:
     name: my-app
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn -w 1 gasik_bot:app
+
+
+
 
