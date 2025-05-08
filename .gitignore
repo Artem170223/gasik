@@ -1,0 +1,15 @@
+# Системные файлы Git
+HEAD
+FETCH_HEAD
+config
+description
+packed-refs
+git
+
+# Python файлы
+__pycache__/
+*.pyc
+
+# IDE файлы
+.idea/
+.vscode/
