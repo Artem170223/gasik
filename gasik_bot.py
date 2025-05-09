@@ -1,21 +1,21 @@
 from dotenv import load_dotenv
 import os
-
-# Загружаем переменные окружения из .env файла
-load_dotenv()
-BOT_TOKEN = os.getenv("BOT_TOKEN")  # ❗ Единственный раз!
-
 from telegram import Update, InputFile
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler,
     filters, ConversationHandler, ContextTypes
 )
 
-YOUR_TELEGRAM_ID = 6118019853
+# Загружаем переменные окружения из .env файла
+load_dotenv()
+BOT_TOKEN = os.getenv("BOT_TOKEN")  # Токен бота из переменной окружения .env
+
+YOUR_TELEGRAM_ID = 6118019853  # Твой ID в Telegram для личных сообщений
 
 # Состояния
 VIN, BRAND, MODEL, YEAR, COMMENT, EXTRA = range(6)
 
+# Обработчик команды /start
 async def welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Добро пожаловать в автоМаркет!\nЧтобы оформить заказ, напиши /start"
@@ -97,8 +97,10 @@ async def finish_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Дополнительно: {data.get('extra', '-')}"
     )
 
+    # Отправка информации о заказе на твой Telegram ID
     await context.bot.send_message(chat_id=YOUR_TELEGRAM_ID, text=msg)
 
+    # Отправка фото, если оно есть
     if 'photo' in data:
         with open(data['photo'], 'rb') as f:
             await context.bot.send_photo(chat_id=YOUR_TELEGRAM_ID, photo=InputFile(f))
@@ -112,11 +114,14 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 if __name__ == '__main__':
+    # Проверка на наличие токена
     if not BOT_TOKEN:
         raise ValueError("❌ BOT_TOKEN не установлен! Убедись, что переменная окружения задана.")
 
+    # Создание приложения с использованием токена
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
+    # Обработчик для команд и состояний
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
@@ -134,7 +139,9 @@ if __name__ == '__main__':
         fallbacks=[CommandHandler("cancel", cancel)],
     )
 
+    # Добавляем обработчики
     app.add_handler(conv_handler)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, welcome))
 
+    # Запуск бота с использованием long polling
     app.run_polling()
