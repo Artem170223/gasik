@@ -1,6 +1,8 @@
 python-telegram-bot==20.8
 httpx~=0.26.0
 gunicorn
+python-dotenv
+
 
 
 
