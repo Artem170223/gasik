@@ -1,9 +1,10 @@
 services:
-  - type: web
-    name: my-app
+  - type: worker
+    name: gasik-bot
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn -w 1 gasik_bot:app
+    startCommand: python gasik_bot.py
+
 
 
 
