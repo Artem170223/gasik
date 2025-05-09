@@ -1,21 +1,21 @@
 from dotenv import load_dotenv
 import os
+import asyncio
 from telegram import Update, InputFile
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler,
     filters, ConversationHandler, ContextTypes
 )
 
-# Загружаем переменные окружения из .env файла
+# Загружаем переменные окружения
 load_dotenv()
-BOT_TOKEN = os.getenv("BOT_TOKEN")  # Токен бота из переменной окружения .env
+BOT_TOKEN = os.getenv("BOT_TOKEN")  # ❗ Убедись, что этот токен задан в Render
 
-YOUR_TELEGRAM_ID = 6118019853  # Твой ID в Telegram для личных сообщений
+YOUR_TELEGRAM_ID = 6118019853  # Замени на свой Telegram ID
 
 # Состояния
 VIN, BRAND, MODEL, YEAR, COMMENT, EXTRA = range(6)
 
-# Обработчик команды /start
 async def welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Добро пожаловать в автоМаркет!\nЧтобы оформить заказ, напиши /start"
@@ -68,8 +68,7 @@ async def comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return EXTRA
 
 async def extra(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    extra_text = update.message.text.strip()
-    context.user_data['extra'] = extra_text
+    context.user_data['extra'] = update.message.text.strip()
     return await finish_order(update, context)
 
 async def skip_extra(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -97,10 +96,8 @@ async def finish_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Дополнительно: {data.get('extra', '-')}"
     )
 
-    # Отправка информации о заказе на твой Telegram ID
     await context.bot.send_message(chat_id=YOUR_TELEGRAM_ID, text=msg)
 
-    # Отправка фото, если оно есть
     if 'photo' in data:
         with open(data['photo'], 'rb') as f:
             await context.bot.send_photo(chat_id=YOUR_TELEGRAM_ID, photo=InputFile(f))
@@ -113,15 +110,15 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Диалог отменён.")
     return ConversationHandler.END
 
-if __name__ == '__main__':
-    # Проверка на наличие токена
+async def main():
     if not BOT_TOKEN:
         raise ValueError("❌ BOT_TOKEN не установлен! Убедись, что переменная окружения задана.")
 
-    # Создание приложения с использованием токена
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    # Обработчик для команд и состояний
+    # Удаляем возможный webhook, чтобы избежать конфликта с polling
+    await app.bot.delete_webhook(drop_pending_updates=True)
+
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
@@ -139,9 +136,10 @@ if __name__ == '__main__':
         fallbacks=[CommandHandler("cancel", cancel)],
     )
 
-    # Добавляем обработчики
     app.add_handler(conv_handler)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, welcome))
 
-    # Запуск бота с использованием long polling
-    app.run_polling()
+    await app.run_polling()
+
+if __name__ == '__main__':
+    asyncio.run(main())
